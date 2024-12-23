@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+faiss-cpu
+numpy
+transformers
+datasets
+sentence-transformers
+pandas
+pydantic
