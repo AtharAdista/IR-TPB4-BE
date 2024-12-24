@@ -2,25 +2,20 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer, AutoModel
-from rank_bm25 import BM25Okapi
 import numpy as np
 from typing import List, Dict, Tuple
 import nltk
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 from collections import defaultdict
 import faiss
 import pandas as pd
 from nltk.stem.snowball import SnowballStemmer
 import pickle
-import os
 import json
 from sentence_transformers import SentenceTransformer
 
 # Download NLTK data
 nltk.download('punkt_tab')
-nltk.download('stopwords')
-
 
 class SemanticEncoder(nn.Module):
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2", embedding_dim: int = 384):
