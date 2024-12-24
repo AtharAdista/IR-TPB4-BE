@@ -120,7 +120,7 @@ class HybridRetriever:
     
         return results
     
-    def search(self, query: str, k: int = 100, alpha: float = 0.3) -> List[Dict]:
+    def search(self, query: str, k: int = 100, alpha: float = 0.5) -> List[Dict]:
         lexical_results = self._lexical_search(query, k)
         semantic_results = self._semantic_search(query, k)
 

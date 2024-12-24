@@ -106,11 +106,9 @@ class LTRModel:
 
     def train(self, train_queries: pd.DataFrame, dev_queries, qrels_train: pd.DataFrame, qrels_dev: pd.DataFrame, k: int = 30):
 
-        # Prepare training and validation data
         X_train, y_train, _, group_sizes_train = self.prepare_training_data(train_queries, qrels_train, k)
         X_val, y_val, _, group_sizes_val = self.prepare_training_data(dev_queries, qrels_dev, k)
 
-        # Train the model with validation
         self.model.fit(
             X_train, y_train,
             group=group_sizes_train,
