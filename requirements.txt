@@ -7,3 +7,6 @@ datasets
 sentence-transformers
 pandas
 pydantic
+nltk
+rank_bm25
+xgboost

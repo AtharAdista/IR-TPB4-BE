@@ -6,7 +6,10 @@ import json
 import os
 from sentence_transformers import SentenceTransformer
 from fastapi.middleware.cors import CORSMiddleware
+from .retriever import HybridRetriever
+from .LTRModel import LTRModel
 
+import pandas as pd
 
 
 # Initialize FastAPI app
@@ -21,26 +24,27 @@ app.add_middleware(
 )
 
 # Path ke file
-index_path = os.path.join("faiss_index", "data", "faiss_index.bin")
+semantic_path = os.path.join("faiss_index", "data", "faiss_index.bin")
+bm25_path = os.path.join("bm25_index", "b25_index.pkl")
+ltr_path = os.path.join("ltr_model", "ltr_model.json")
 metadata_path = os.path.join("faiss_index", "data", "metadata.json")
 
+doc_path = os.path.join("faiss_index", "data", "corpus_dpr.csv")
 
-# Load model SentenceTransformer
-model = SentenceTransformer("all-MiniLM-L6-v2")
+doc = pd.read_csv(doc_path)
+retriever = HybridRetriever(documents=doc, bm25_index_path=bm25_path, semantic_index_path=semantic_path, metadata_path=metadata_path)
+ltr_model = LTRModel(retriever)
+ltr_model.load_model(ltr_path)
 
-# Load FAISS index dan metadata
-def load_faiss_index():
-    # Load FAISS index
-    index = faiss.read_index(index_path)
-    
-    # Load metadata
-    with open(metadata_path, "r") as f:
-        metadata = json.load(f)
+def load_faiss_index(path:str, metadata_path):
+        index = faiss.read_index(path)
         
-    return index, metadata
+        with open(metadata_path, "r") as f:
+            metadata = json.load(f)
+        
+        return index, metadata
 
-index, metadata = load_faiss_index()
-
+index, metadata = load_faiss_index(semantic_path, metadata_path)
 # Pydantic model untuk menerima input query
 class Query(BaseModel):
     query: str
@@ -48,27 +52,16 @@ class Query(BaseModel):
 # Endpoint untuk pencarian berdasarkan query
 @app.post("/search/")
 async def search(query: Query):
-    # Encode query text
-    query_embedding = model.encode(query.query).astype("float32").reshape(1, -1)
-
-    # Lakukan pencarian menggunakan FAISS
-    D, I = index.search(query_embedding, k=5)  # Menampilkan 5 hasil teratas (k=5)
-
-    # Ambil hasil metadata berdasarkan ID dokumen yang ditemukan
-    results = []
-    for idx in I[0]:
-        if idx != -1:  # -1 berarti tidak ada hasil
-            result = {
-                "doc_id": metadata["doc_ids"][idx],
-                "title": metadata["doc_texts"][idx].split(" ")[0],  # Menampilkan judul dokumen
-                "content": metadata["doc_texts"][idx],
-            }
-            results.append(result)
+    results = ltr_model.search(query.query)
     
     if not results:
         raise HTTPException(status_code=404, detail="No documents found")
     
+    # Convert numpy.int64 to int
+    results = [{key: int(value) if isinstance(value, np.int64) else value for key, value in result.items()} for result in results]
+    
     return {"results": results}
+
 
 @app.get("/search/{doc_id}")
 async def get_search_result(doc_id: int):
